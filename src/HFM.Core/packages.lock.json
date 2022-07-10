@@ -39,6 +39,21 @@
           "protobuf-net.Core": "3.0.101"
         }
       },
+      "SSH.NET": {
+        "type": "Direct",
+        "requested": "[2023.0.1, )",
+        "resolved": "2023.0.1",
+        "contentHash": "ZDA87AMfRonF+FtCfMkA4CiH9wWpxkqmnIcs+rZ234AJFRVZb1nI9OSb4wNAb/CiJH4ZEqA27/Xj+Btdnakk3A==",
+        "dependencies": {
+          "SshNet.Security.Cryptography": "[1.3.0]"
+        }
+      },
+      "SshKeyGenerator": {
+        "type": "Direct",
+        "requested": "[1.1.51, )",
+        "resolved": "1.1.51",
+        "contentHash": "ZIDC1+vebbDyQYqpy7TO1xfGkByyiwHmv97kDXBAoENoW3YuWp+mnnB7F3k56vwOxmkEs+r1csyB2+cnNi2sEQ=="
+      },
       "System.Net.Http.Json": {
         "type": "Direct",
         "requested": "[6.0.0, )",
@@ -57,6 +72,11 @@
         "type": "Transitive",
         "resolved": "3.0.101",
         "contentHash": "gf9QIF0RlctfjmOjbE6eOyMulkNEsH7tHncjKj/4BTu9tkuTyrH3fv5I+35GnolJqKJ6fh9kYaezvNRL3t75+Q=="
+      },
+      "SshNet.Security.Cryptography": {
+        "type": "Transitive",
+        "resolved": "1.3.0",
+        "contentHash": "5pBIXRjcSO/amY8WztpmNOhaaCNHY/B6CcYDI7FSTgqSyo/ZUojlLiKcsl+YGbxQuLX439qIkMfP0PHqxqJi/Q=="
       },
       "System.Reflection.Emit": {
         "type": "Transitive",

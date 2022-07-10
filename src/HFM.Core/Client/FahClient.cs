@@ -1,5 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using System.Text;
+using Renci.SshNet;
+using Renci.SshNet.Common;
 
 using HFM.Client;
 using HFM.Core.Data;
@@ -106,6 +109,16 @@ public class FahClient : Client, IFahClient, IFahClientCommand
     }
 
     /// <summary>
+    /// The user name of the Debian/Ubunut Linux user to use for nvidia-smi monitoring
+    /// </summary>
+    private const string DEBIAN_CLIENT_USERNAME = "hfmclient";
+
+    /// <summary>
+    /// The desired home directory of the <see cref="DEBIAN_CLIENT_USERNAME"/> user
+    /// </summary>
+    private const string DEBIAN_CLIENT_HOME_DIR = "/home/HFM.NET";
+
+    /// <summary>
     /// This is the exact command line to use when querying nvidia-smi to obtain GPU statistics
     /// <br/>Works with PowerShell (Windows) and sh/bash (Debian/Ubunut flavors of linux)
     /// <br/>NOTE: May work for all flavors of OS as there isn't anything OS syntax specific in this command
@@ -118,6 +131,22 @@ public class FahClient : Client, IFahClient, IFahClientCommand
         PcieVersionType PcieVersionCurrent, PcieLanesType PcieLanesCurrent, PcieVersionType PcieVersionMax, PcieLanesType PcieLanesMax,
         string PowerState, double CurrentPower_Watt, double PowerLimitCurrent_Watt, double PowerLimitDefault_Watt,
         double GraphicsClock_MHz, double MemoryClock_MHz);
+
+    public static void CreateNewSshRsaKeyPair(ClientSettings settings, out string publicKey)
+    {
+        using var keygen = new SshKeyGenerator.SshKeyGenerator(4096);
+        publicKey = keygen.ToRfcPublicKey($"{DEBIAN_CLIENT_USERNAME}@HFM.NET");
+
+        // REVISIT: Properly save the private key to HFM.NET key store for this server
+        // TODO: This at least needs to trigger a persistence update
+        settings.SshPrivateKey = keygen.ToPrivateKey();
+
+        // DEBUG: Save to files as if they were generated as regular 
+        string privateKeyFile = $@"PRIVATE_KEY_FILE_BASE_PATH\id_rsa_hfmclient.{settings.Server}";
+        string publicKeyFile = $"{privateKeyFile}.pub";
+        File.WriteAllText(privateKeyFile, settings.SshPrivateKey);
+        File.WriteAllText(publicKeyFile, publicKey);
+    }
 
     private NvidiaSmiQueryStatus TryRetrieveNvidiaSmiStatistics(out IReadOnlyDictionary<int, GPUStatistic> gpuStats)
     {
@@ -145,9 +174,54 @@ public class FahClient : Client, IFahClient, IFahClientCommand
     private NvidiaSmiQueryStatus _TryRetrieveNvidiaSmiStatistics_Linux(out IReadOnlyDictionary<int, GPUStatistic> gpuStats)
     {
         gpuStats = null;
+        if (Settings?.EnableSsh != true) return NvidiaSmiQueryStatus.SshNotEnabled;
+
+        if (!ClientSettings.DoesLinuxUserNameLookValid(Settings.SshUserName) ||
+            !ClientSettings.DoesSshRsaPrivateKeyLookValid(Settings.SshPrivateKey) ||
+            !ClientSettings.DoesPortLookValid(Settings.Port))
+            return NvidiaSmiQueryStatus.SshNotConfigured;
+
         try
         {
+            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(Settings.SshPrivateKey));
+            using var sshKeyFile = new PrivateKeyFile(stream);
+            using var client = new SshClient(Settings.Server, Settings.SshPort, Settings.SshUserName, sshKeyFile);
+            client.Connect();
+            using var cmd = client.CreateCommand(NVIDIA_SMI_QUERY_STRING);
+            var result = cmd.Execute();
+            if (cmd.ExitStatus != 0 || !String.IsNullOrWhiteSpace(cmd.Error)) return NvidiaSmiQueryStatus.QueryFailure;
+
+            gpuStats = result.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Select(x => new GPUStatistic(
+                    //Int32.TryParse(x[0], NumberStyles.AllowHexSpecifier, null, out var busId) ? busId : -1,
+                    // REVISIT: Need a non-throwing method for Hex conversion, but there doesn't appear to be a built-in method
+                    Convert.ToInt32(x[0], 16),
+                    Double.TryParse(x[1], out var fanSpeed) ? fanSpeed : 0.0d,
+                    Double.TryParse(x[2], out var temp) ? temp : 0.0d,
+                    Int32.TryParse(x[3], out int tempInt) ? (PcieVersionType)tempInt : PcieVersionType.Unknown,
+                    Int32.TryParse(x[4], out tempInt) ? (PcieLanesType)tempInt : PcieLanesType.Unknown,
+                    Int32.TryParse(x[5], out tempInt) ? (PcieVersionType)tempInt : PcieVersionType.Unknown,
+                    Int32.TryParse(x[6], out tempInt) ? (PcieLanesType)tempInt : PcieLanesType.Unknown,
+                    x[7],
+                    Double.TryParse(x[8], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[9], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[10], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[11], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[12], out temp) ? temp : 0.0d))
+                .ToDictionary(x => x.BusId);
+
             return NvidiaSmiQueryStatus.Success;
+        }
+        catch (SshConnectionException e)
+        {
+            Trace.Fail(e.Message, e.ToString());
+            return NvidiaSmiQueryStatus.ConnectionFailure;
+        }
+        catch (SshAuthenticationException e)
+        {
+            Trace.Fail(e.Message, e.ToString());
+            return NvidiaSmiQueryStatus.AuthenticationFailure;
         }
         catch (Exception e)
         {
