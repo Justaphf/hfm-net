@@ -17,6 +17,20 @@ public interface IFahClient : IClient
     FahClientConnection Connection { get; }
 }
 
+public enum NvidiaSmiQueryStatus
+{
+    Success,
+    UnsupportedOS,
+    InvalidServerName,
+    SshNotEnabled,
+    SshNotConfigured,
+    ConnectionFailure,
+    AuthenticationFailure,
+    QueryFailure,
+
+    UnknownError
+}
+
 public class FahClient : Client, IFahClient, IFahClientCommand
 {
     protected override void OnSettingsChanged(ClientSettings oldSettings, ClientSettings newSettings)
@@ -89,6 +103,71 @@ public class FahClient : Client, IFahClient, IFahClientCommand
         Interlocked.Exchange(ref _clientData, slots);
 
         OnClientDataChanged();
+    }
+
+    /// <summary>
+    /// This is the exact command line to use when querying nvidia-smi to obtain GPU statistics
+    /// <br/>Works with PowerShell (Windows) and sh/bash (Debian/Ubunut flavors of linux)
+    /// <br/>NOTE: May work for all flavors of OS as there isn't anything OS syntax specific in this command
+    /// </summary>
+    private const string NVIDIA_SMI_QUERY_STRING = "nvidia-smi --query-gpu=pci.bus,fan.speed,temperature.gpu," +
+        "pcie.link.gen.current,pcie.link.width.current,pcie.link.gen.max,pcie.link.width.max,pstate,power.draw," +
+        "power.limit,power.default_limit,clocks.current.graphics,clocks.current.memory --format=csv,noheader,nounits";
+
+    internal readonly record struct GPUStatistic(int BusId, double FanSpeed_Pct, double GPUTemp_C,
+        PcieVersionType PcieVersionCurrent, PcieLanesType PcieLanesCurrent, PcieVersionType PcieVersionMax, PcieLanesType PcieLanesMax,
+        string PowerState, double CurrentPower_Watt, double PowerLimitCurrent_Watt, double PowerLimitDefault_Watt,
+        double GraphicsClock_MHz, double MemoryClock_MHz);
+
+    private NvidiaSmiQueryStatus TryRetrieveNvidiaSmiStatistics(out IReadOnlyDictionary<int, GPUStatistic> gpuStats)
+    {
+        gpuStats = null;
+
+        string os = Platform?.OperatingSystem;
+        if (String.IsNullOrWhiteSpace(os)) return NvidiaSmiQueryStatus.UnsupportedOS;
+        // REVISIT: This almost certainly isn't robust enough to catch all flavors of operating systems (but it works on my setup for now)
+        bool isWindows = os.Contains("windows", StringComparison.InvariantCultureIgnoreCase);
+        bool isLinux = os.Contains("linux", StringComparison.InvariantCultureIgnoreCase);
+
+        // nvidia-smi accessible via SSH on Linux, and PowerShell on local Windows machines
+        // NOTE: Remote Windows can also be accessed via PowerShell, but it requires some non-standard configuration first
+        // REVISIT: Haven't looked at mac since I don't have the hardware for any testing
+        if (!isWindows && !isLinux) return NvidiaSmiQueryStatus.UnsupportedOS;
+
+        string server = Settings?.Server;
+        if (String.IsNullOrWhiteSpace(server)) return NvidiaSmiQueryStatus.InvalidServerName;
+
+        return isWindows ?
+            _TryRetrieveNvidiaSmiStatistics_Windows(out gpuStats) :
+            _TryRetrieveNvidiaSmiStatistics_Linux(out gpuStats);
+    }
+
+    private NvidiaSmiQueryStatus _TryRetrieveNvidiaSmiStatistics_Linux(out IReadOnlyDictionary<int, GPUStatistic> gpuStats)
+    {
+        gpuStats = null;
+        try
+        {
+            return NvidiaSmiQueryStatus.Success;
+        }
+        catch (Exception e)
+        {
+            Trace.Fail(e.Message, e.ToString());
+            return NvidiaSmiQueryStatus.UnknownError;
+        }
+    }
+
+    private NvidiaSmiQueryStatus _TryRetrieveNvidiaSmiStatistics_Windows(out IReadOnlyDictionary<int, GPUStatistic> gpuStats)
+    {
+        gpuStats = null;
+        try
+        {
+            return NvidiaSmiQueryStatus.Success;
+        }
+        catch (Exception e)
+        {
+            Trace.Fail(e.Message, e.ToString());
+            return NvidiaSmiQueryStatus.UnknownError;
+        }
     }
 
     protected virtual void OnRefreshSlots(ICollection<IClientData> collection)
@@ -223,6 +302,7 @@ public class FahClient : Client, IFahClient, IFahClientCommand
         var workUnitQueueBuilder = new WorkUnitQueueItemCollectionBuilder(
             Messages.UnitCollection, Messages.Info?.System);
 
+        var statResult = TryRetrieveNvidiaSmiStatistics(out var gpuStats);
         foreach (var clientData in ClientDataCollection.Cast<FahClientData>())
         {
             var previousWorkUnitModel = clientData.WorkUnitModel;
@@ -241,6 +321,42 @@ public class FahClient : Client, IFahClient, IFahClientCommand
 
             string statusMessage = String.Format(CultureInfo.CurrentCulture, "Slot Status: {0}", clientData.Status);
             Logger.Info(String.Format(Logging.Logger.NameFormat, clientData.Name, statusMessage));
+
+            if (statResult == NvidiaSmiQueryStatus.Success &&
+                gpuStats != null &&
+                clientData.SlotType == SlotType.GPU &&
+                clientData.GPUBus.HasValue &&
+                gpuStats.TryGetValue(clientData.GPUBus.Value, out var stat))
+            {
+                // NOTE: Convert from percent to ratio in order to use the Percent number format for display purposes
+                clientData.GPUFanSpeed = stat.FanSpeed_Pct / 100.0d;
+                clientData.GPUCoreTemp_C = stat.GPUTemp_C;
+                clientData.GPUPcieVersionCurrent = stat.PcieVersionCurrent;
+                clientData.GPUPcieLanesCurrent = stat.PcieLanesCurrent;
+                clientData.GPUPcieVersionMax = stat.PcieVersionMax;
+                clientData.GPUPcieLanesMax = stat.PcieLanesMax;
+                clientData.GPUPowerState = stat.PowerState;
+                clientData.GPUPowerDrawCurrent_Watts = stat.CurrentPower_Watt;
+                clientData.GPUPowerLimitCurrent_Watts = stat.PowerLimitCurrent_Watt;
+                clientData.GPUPowerLimitDefault_Watts = stat.PowerLimitDefault_Watt;
+                clientData.GPUGraphicsClock_MHz = stat.GraphicsClock_MHz;
+                clientData.GPUMemoryClock_MHz = stat.MemoryClock_MHz;
+            }
+            else
+            {
+                clientData.GPUFanSpeed = null;
+                clientData.GPUCoreTemp_C = null;
+                clientData.GPUPcieVersionCurrent = PcieVersionType.Unknown;
+                clientData.GPUPcieLanesCurrent = PcieLanesType.Unknown;
+                clientData.GPUPcieVersionMax = PcieVersionType.Unknown;
+                clientData.GPUPcieLanesMax = PcieLanesType.Unknown;
+                clientData.GPUPowerState = null;
+                clientData.GPUPowerDrawCurrent_Watts = null;
+                clientData.GPUPowerLimitCurrent_Watts = null;
+                clientData.GPUPowerLimitDefault_Watts = null;
+                clientData.GPUGraphicsClock_MHz = null;
+                clientData.GPUMemoryClock_MHz = null;
+            }
         }
 
         string message = String.Format(CultureInfo.CurrentCulture, "Retrieval finished: {0}", sw.GetExecTime());
