@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using System.Management.Automation;
 using System.Text;
 using Renci.SshNet;
 using Renci.SshNet.Common;
@@ -233,8 +234,34 @@ public class FahClient : Client, IFahClient, IFahClientCommand
     private NvidiaSmiQueryStatus _TryRetrieveNvidiaSmiStatistics_Windows(out IReadOnlyDictionary<int, GPUStatistic> gpuStats)
     {
         gpuStats = null;
+        // TODO: Get working for remote Windows machines (this only works on the local machine)
+        string server = Settings.Server;
         try
         {
+            using var shell = PowerShell.Create();
+            shell.Runspace = null;
+            shell.AddScript(NVIDIA_SMI_QUERY_STRING);
+            var results = shell.Invoke();
+            gpuStats = results.Select(x => x.ToString())
+                .Select(x => x.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Select(x => new GPUStatistic(
+                    //Int32.TryParse(x[0], NumberStyles.AllowHexSpecifier, null, out var busId) ? busId : -1,
+                    // REVISIT: Need a non-throwing method for Hex conversion, but there doesn't appear to be a built-in method
+                    Convert.ToInt32(x[0], 16),
+                    Double.TryParse(x[1], out var fanSpeed) ? fanSpeed : 0.0d,
+                    Double.TryParse(x[2], out var temp) ? temp : 0.0d,
+                    Int32.TryParse(x[3], out int tempInt) ? (PcieVersionType)tempInt : PcieVersionType.Unknown,
+                    Int32.TryParse(x[4], out tempInt) ? (PcieLanesType)tempInt : PcieLanesType.Unknown,
+                    Int32.TryParse(x[5], out tempInt) ? (PcieVersionType)tempInt : PcieVersionType.Unknown,
+                    Int32.TryParse(x[6], out tempInt) ? (PcieLanesType)tempInt : PcieLanesType.Unknown,
+                    x[7],
+                    Double.TryParse(x[8], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[9], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[10], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[11], out temp) ? temp : 0.0d,
+                    Double.TryParse(x[12], out temp) ? temp : 0.0d))
+                .ToDictionary(x => x.BusId);
+
             return NvidiaSmiQueryStatus.Success;
         }
         catch (Exception e)

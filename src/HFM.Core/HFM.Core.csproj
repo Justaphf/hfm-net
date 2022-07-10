@@ -18,6 +18,7 @@
     <PackageReference Include="HFM.Client" Version="1.0.1" />
     <PackageReference Include="HFM.Log" Version="1.0.0" />
     <PackageReference Include="HFM.Proteins" Version="1.0.2" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.2.18" />
     <PackageReference Include="protobuf-net" Version="3.0.101" />
     <PackageReference Include="SSH.NET" Version="2023.0.1" />
     <PackageReference Include="SshKeyGenerator" Version="1.1.51" />
