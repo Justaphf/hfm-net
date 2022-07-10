@@ -120,6 +120,18 @@ namespace HFM.Forms.Views
             SlotsGridColumns.Find("Name").AddToDataGridView(dgv);
             SlotsGridColumns.Find("SlotType").AddToDataGridView(dgv);
             SlotsGridColumns.Find("Processor").AddToDataGridView(dgv);
+
+            SlotsGridColumns.Find("GpuFanSpeed").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("GpuTemp").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("PcieCurrent").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("PcieMax").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("PowerState").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("PowerDraw").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("PowerLimit").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("PowerLimitPercent").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("CoreClock").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("MemClock").AddToDataGridView(dgv);
+
             SlotsGridColumns.Find("TPF").AddToDataGridView(dgv);
             SlotsGridColumns.Find("PPD").AddToDataGridView(dgv);
             SlotsGridColumns.Find("ETA").AddToDataGridView(dgv);

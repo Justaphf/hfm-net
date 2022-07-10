@@ -58,6 +58,38 @@ public class FahClientData : ClientData, IProteinBenchmarkDetailSource, IComplet
 
     public int? Threads => Description is CPUSlotDescription cpu ? cpu.CPUThreads : null;
 
+    public override int? GPUBus => Description is GPUSlotDescription gpu ? gpu.GPUBus : null;
+
+    public override double? GPUFanSpeed { get; set; }
+
+    public override double? GPUCoreTemp_C { get; set; }
+
+    public PcieVersionType GPUPcieVersionCurrent { get; set; }
+
+    public PcieVersionType GPUPcieVersionMax { get; set; }
+
+    public PcieLanesType GPUPcieLanesCurrent { get; set; }
+
+    public PcieLanesType GPUPcieLanesMax { get; set; }
+
+    public override string GPUPcieCurrent => GPUPcieLanesCurrent == PcieLanesType.Unknown ? "" : $"PCIe {GPUPcieVersionCurrent.Description()} {GPUPcieLanesCurrent.Description()}";
+
+    public override string GPUPcieMax => GPUPcieLanesMax == PcieLanesType.Unknown ? "" : $"PCIe {GPUPcieVersionMax.Description()} {GPUPcieLanesMax.Description()}";
+
+    public override string GPUPowerState { get; set; }
+
+    public override double? GPUPowerDrawCurrent_Watts { get; set; }
+
+    public override double? GPUPowerLimitCurrent_Watts { get; set; }
+
+    public override double? GPUPowerLimitDefault_Watts { get; set; }
+
+    public override double? GPUPowerLimitRatio => GPUPowerLimitCurrent_Watts / GPUPowerLimitDefault_Watts;
+
+    public override double? GPUGraphicsClock_MHz { get; set; }
+
+    public override double? GPUMemoryClock_MHz { get; set; }
+
     public override SlotStatus Status =>
         base.Status == SlotStatus.Running
             ? IsUsingBenchmarkFrameTime

@@ -60,6 +60,16 @@ public class SlotsGridColumnCollection : Collection<SlotsGridColumn>
         Add(new SlotsGridDefaultColumn("Name", "Name", "Client name and slot ID", nameof(IClientData.Name)));
         Add(new SlotsGridDefaultColumn("SlotType", "Slot Type", "Client slot type (CPU:N or GPU) where N is the number of cpu threads", nameof(IClientData.SlotTypeString)));
         Add(new SlotsGridDefaultColumn("Processor", "Processor", "CPU or GPU processor name", nameof(IClientData.Processor)));
+        Add(new SlotsGridFixedPrecisionColumn("GpuFanSpeed", "GPU Fan Speed", "GPU Fan Speed", nameof(IClientData.GPUFanSpeed), 1, FixedPrecisionNumberFormat.Percent));
+        Add(new SlotsGridTemperatureColumn("GpuTemp", "GPU Temp (°C)", "GPU Temp (°C)", nameof(IClientData.GPUCoreTemp_C), 1));
+        Add(new SlotsGridDefaultColumn("PcieCurrent", "PCIe (Current)", "PCIe (Current)", nameof(IClientData.GPUPcieCurrent)));
+        Add(new SlotsGridDefaultColumn("PcieMax", "PCIe (Max)", "PCIe (Max)", nameof(IClientData.GPUPcieMax)));
+        Add(new SlotsGridDefaultColumn("PowerState", "PState", "PState", nameof(IClientData.GPUPowerState)));
+        Add(new SlotsGridFixedPrecisionColumn("PowerDraw", "Power Draw (W)", "Power Draw (W)", nameof(IClientData.GPUPowerDrawCurrent_Watts), 2));
+        Add(new SlotsGridFixedPrecisionColumn("PowerLimit", "Power Limit (W)", "Power Limit (W)", nameof(IClientData.GPUPowerLimitCurrent_Watts), 1));
+        Add(new SlotsGridFixedPrecisionColumn("PowerLimitPercent", "Power Limit (%)", "Power Limit (%)", nameof(IClientData.GPUPowerLimitRatio), 2, FixedPrecisionNumberFormat.Percent));
+        Add(new SlotsGridFixedPrecisionColumn("CoreClock", "Graphics Clock (MHz)", "Graphics Clock (MHz)", nameof(IClientData.GPUGraphicsClock_MHz), 1));
+        Add(new SlotsGridFixedPrecisionColumn("MemClock", "Memory Clock (MHz)", "Memory Clock (MHz)", nameof(IClientData.GPUMemoryClock_MHz), 1));
         Add(new SlotsGridTPFColumn());
         Add(new SlotsGridPPDColumn());
         Add(new SlotsGridETAColumn());

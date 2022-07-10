@@ -2,8 +2,45 @@
 using HFM.Log;
 using HFM.Preferences;
 using HFM.Proteins;
+using System.ComponentModel;
 
 namespace HFM.Core.Client;
+
+public enum PcieVersionType
+{
+    [Description("")]
+    Unknown = 0,
+    [Description("1.0")]
+    v1 = 1,
+    [Description("2.0")]
+    v2 = 2,
+    [Description("3.0")]
+    v3 = 3,
+    [Description("4.0")]
+    v4 = 4,
+    [Description("5.0")]
+    v5 = 5,
+    [Description("6.0")]
+    v6 = 6,
+    [Description("7.0")]
+    v7 = 7,
+}
+
+public enum PcieLanesType
+{
+    [Description("")]
+    Unknown = 0,
+    [Description("x1")]
+    x1 = 1,
+    [Description("x2")]
+    x2 = 2,
+    [Description("x4")]
+    x4 = 4,
+    [Description("x8")]
+    x8 = 8,
+    [Description("x16")]
+    x16 = 16,
+}
 
 public interface IClientData
 {
@@ -37,6 +74,19 @@ public interface IClientData
     ClientSettings Settings { get; }
     ClientPlatform Platform { get; }
     Protein CurrentProtein { get; }
+
+    int? GPUBus { get; }
+    double? GPUFanSpeed { get; }
+    double? GPUCoreTemp_C { get; }
+    string GPUPcieCurrent { get; }
+    string GPUPcieMax { get; }
+    string GPUPowerState { get; }
+    double? GPUPowerDrawCurrent_Watts { get; }
+    double? GPUPowerLimitCurrent_Watts { get; }
+    double? GPUPowerLimitDefault_Watts { get; }
+    double? GPUPowerLimitRatio { get; }
+    double? GPUGraphicsClock_MHz { get; }
+    double? GPUMemoryClock_MHz { get; }
 
     SlotIdentifier SlotIdentifier { get; }
     ProteinBenchmarkIdentifier BenchmarkIdentifier { get; }
@@ -74,6 +124,31 @@ public class ClientData : IClientData
     public virtual ClientSettings Settings { get; set; }
     public virtual ClientPlatform Platform { get; set; }
     public virtual Protein CurrentProtein { get; set; }
+
+    public virtual int? GPUBus => null;
+
+    public virtual double? GPUFanSpeed { get; set; }
+
+    public virtual double? GPUCoreTemp_C { get; set; }
+
+    public virtual string GPUPcieCurrent => "";
+
+    public virtual string GPUPcieMax => "";
+
+    public virtual string GPUPowerState { get; set; }
+
+    public virtual double? GPUPowerDrawCurrent_Watts { get; set; }
+
+    public virtual double? GPUPowerLimitCurrent_Watts { get; set; }
+
+    public virtual double? GPUPowerLimitDefault_Watts { get; set; }
+
+    public virtual double? GPUPowerLimitRatio => GPUPowerLimitCurrent_Watts / GPUPowerLimitDefault_Watts;
+
+    public virtual double? GPUGraphicsClock_MHz { get; set; }
+
+    public virtual double? GPUMemoryClock_MHz { get; set; }
+
 
     public virtual SlotIdentifier SlotIdentifier { get; set; }
     public virtual ProteinBenchmarkIdentifier BenchmarkIdentifier { get; set; }
