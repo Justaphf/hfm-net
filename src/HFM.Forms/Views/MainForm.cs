@@ -610,6 +610,7 @@ namespace HFM.Forms.Views
         {
             dataGridView1.AutoGenerateColumns = false;
             dataGridView1.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.DisplayedCellsExceptHeaders;
+            dataGridView1.ColumnHeadersDefaultCellStyle.WrapMode = DataGridViewTriState.True;
             SetupDataGridViewColumns(dataGridView1);
 
             _columnSelector = new DataGridViewColumnSelector(dataGridView1);
