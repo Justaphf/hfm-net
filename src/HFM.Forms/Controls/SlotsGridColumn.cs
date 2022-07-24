@@ -7,6 +7,43 @@ using HFM.Preferences;
 
 namespace HFM.Forms.Controls;
 
+/// <summary>
+/// The supported string formatting options that are valid for all numeric types
+/// <br/>See <seealso href="https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-numeric-format-strings#standard-format-specifiers"/>
+/// </summary>
+public enum FixedPrecisionNumberFormat
+{
+    /// <summary>
+    /// The more compact of either fixed-point or scientific notation.
+    /// </summary>
+    General = 'G',
+
+    /// <summary>
+    /// Integral and decimal digits, group separators, and a decimal separator with optional negative sign.
+    /// </summary>
+    Number = 'N',
+
+    /// <summary>
+    /// Integral and decimal digits with optional negative sign.
+    /// </summary>
+    FixedPoint = 'F',
+
+    /// <summary>
+    /// Number multiplied by 100 and displayed with a percent symbol.
+    /// </summary>
+    Percent = 'P',
+
+    /// <summary>
+    /// Exponential notation.
+    /// </summary>
+    Scientific = 'E',
+
+    /// <summary>
+    /// A currency value.
+    /// </summary>
+    Currency = 'C',
+}
+
 public class SlotsGridColumnCollection : Collection<SlotsGridColumn>
 {
     public IPreferences Preferences { get; }
@@ -552,5 +589,99 @@ public class SlotsGridTimeoutColumn : SlotsGridColumn
         }
 
         return dateTime.ToShortStringOrEmpty();
+    }
+}
+
+public class SlotsGridFixedPrecisionColumn : SlotsGridColumn
+{
+    private int? _precision;
+    /// <summary>
+    /// The number of decimal precision to display in the column
+    /// <br/>Valid range is [0, 15]
+    /// <br/>Avalue of `null` means no precision formatting (this is equivalent to using <see cref="SlotsGridDefaultColumn"/>
+    /// </summary>
+    public int? Precision
+    {
+        get => _precision;
+        set => _precision = value switch
+        {
+            // Above valid precision range limit (for double)
+            > 15 => 15,
+            // Below valid precision range limit (for double)
+            < 0 => 0,
+            // Either in valid range OR null
+            _ => value
+        };
+    }
+
+    /// <summary>
+    /// The number format to use when converting to string.
+    /// <br/>Defaults to <see cref="FixedPrecisionNumberFormat.FixedPoint"/>
+    /// </summary>
+    public FixedPrecisionNumberFormat DisplayFormat { get; set; } = FixedPrecisionNumberFormat.FixedPoint;
+
+    public SlotsGridFixedPrecisionColumn(string columnName, string headerText, string dataPropertyName, int? precision)
+        : this(columnName, headerText, null, dataPropertyName, precision, FixedPrecisionNumberFormat.FixedPoint)
+    {
+    }
+
+    public SlotsGridFixedPrecisionColumn(string columnName, string headerText, string dataPropertyName, int? precision, FixedPrecisionNumberFormat displayFormat)
+        : this(columnName, headerText, null, dataPropertyName, precision, displayFormat)
+    {
+    }
+
+    public SlotsGridFixedPrecisionColumn(string columnName, string headerText, string mouseOverHeaderText, string dataPropertyName, int? precision)
+        : this(columnName, headerText, mouseOverHeaderText, dataPropertyName, precision, FixedPrecisionNumberFormat.FixedPoint)
+    {
+    }
+
+    public SlotsGridFixedPrecisionColumn(string columnName, string headerText, string mouseOverHeaderText, string dataPropertyName, int? precision, FixedPrecisionNumberFormat displayFormat)
+        : base(columnName, headerText, mouseOverHeaderText, dataPropertyName)
+    {
+        Precision = precision;
+        DisplayFormat = displayFormat;
+    }
+
+    protected override string OnGetCellText(object value, IClientData clientData)
+    {
+        if (!Precision.HasValue) return base.OnGetCellText(value, clientData);
+
+        string numberFormat = $"{(char)DisplayFormat}{Precision.Value}";
+        return value switch
+        {
+            double d => d.ToString(numberFormat),
+            float f => f.ToString(numberFormat),
+            decimal m => m.ToString(numberFormat),
+            int i => i.ToString(numberFormat),
+            uint ui => ui.ToString(numberFormat),
+            long l => l.ToString(numberFormat),
+            ulong ul => ul.ToString(numberFormat),
+            short s => s.ToString(numberFormat),
+            ushort us => us.ToString(numberFormat),
+            byte b => b.ToString(numberFormat),
+            sbyte sb => sb.ToString(numberFormat),
+            _ => base.OnGetCellText(value, clientData)
+        };
+    }
+
+    protected override void OnPaintCell(DataGridView grid, DataGridViewCellPaintingEventArgs e, IClientData clientData)
+    {
+        // If there is no precision then we aren't doing anything different from the base paint
+        if (!Precision.HasValue)
+        {
+            base.OnPaintCell(grid, e, clientData);
+            return;
+        }
+
+        // If there is a fixed precision being applied, then we want to right-align the text (rather than the default left align)
+        // because with a fixed precision we will be keeping the decimal point in alignment for all values
+        var backColor = GetBackColorOrSelectionBackColor(grid, e, e.CellStyle.BackColor);
+        FillCellBackColor(e, backColor);
+        PaintGridLines(e, grid.GridColor);
+
+        var textColor = GetTextColorOrSelectionTextColor(grid, e);
+        DrawRightJustifiedText(e, textColor, GetCellText(e, clientData));
+
+        e.Handled = true;
     }
 }
