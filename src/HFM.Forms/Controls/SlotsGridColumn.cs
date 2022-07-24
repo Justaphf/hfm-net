@@ -685,3 +685,70 @@ public class SlotsGridFixedPrecisionColumn : SlotsGridColumn
         e.Handled = true;
     }
 }
+
+public class SlotsGridTemperatureColumn : SlotsGridFixedPrecisionColumn
+{
+    public SlotsGridTemperatureColumn(string columnName, string headerText, string dataPropertyName, int? precision)
+        : base(columnName, headerText, null, dataPropertyName, precision, FixedPrecisionNumberFormat.FixedPoint)
+    {
+    }
+
+    public SlotsGridTemperatureColumn(string columnName, string headerText, string dataPropertyName, int? precision, FixedPrecisionNumberFormat displayFormat)
+        : base(columnName, headerText, null, dataPropertyName, precision, displayFormat)
+    {
+    }
+
+    public SlotsGridTemperatureColumn(string columnName, string headerText, string mouseOverHeaderText, string dataPropertyName, int? precision)
+        : base(columnName, headerText, mouseOverHeaderText, dataPropertyName, precision, FixedPrecisionNumberFormat.FixedPoint)
+    {
+    }
+
+    public SlotsGridTemperatureColumn(string columnName, string headerText, string mouseOverHeaderText, string dataPropertyName, int? precision, FixedPrecisionNumberFormat displayFormat)
+        : base(columnName, headerText, mouseOverHeaderText, dataPropertyName, precision, displayFormat)
+    {
+    }
+
+    protected override void OnPaintCell(DataGridView grid, DataGridViewCellPaintingEventArgs e, IClientData clientData)
+    {
+        var backColor = GetBackColorOrSelectionBackColor(grid, e, e.CellStyle.BackColor);
+        FillCellBackColor(e, backColor);
+        PaintGridLines(e, grid.GridColor);
+
+        var (tempBrush, textColor) = e.Value switch
+        {
+            double d => GetTemperatureDrawingStyle(d),
+            float f => GetTemperatureDrawingStyle(f),
+            decimal m => GetTemperatureDrawingStyle(Convert.ToDouble(m)),
+            int i => GetTemperatureDrawingStyle(i),
+            uint ui => GetTemperatureDrawingStyle(ui),
+            long l => GetTemperatureDrawingStyle(l),
+            ulong ul => GetTemperatureDrawingStyle(ul),
+            short s => GetTemperatureDrawingStyle(s),
+            ushort us => GetTemperatureDrawingStyle(us),
+            byte b => GetTemperatureDrawingStyle(b),
+            sbyte sb => GetTemperatureDrawingStyle(sb),
+            _ => GetTemperatureDrawingStyle(null)
+        };
+
+        // draw the inset box
+        var rectangle = new Rectangle(e.CellBounds.X + 2, e.CellBounds.Y + 2,
+            e.CellBounds.Width - 5, e.CellBounds.Height - 5);
+
+        e.Graphics.FillRectangle(tempBrush, rectangle);
+        DrawRightJustifiedText(e, textColor, GetCellText(e, clientData));
+
+        e.Handled = true;
+    }
+
+    private static (Brush, Color) GetTemperatureDrawingStyle(double? temp_degC)
+    {
+        return temp_degC switch
+        {
+            null => (Brushes.Gray, Color.White),
+            < 60.0d => (Brushes.Blue, Color.White),
+            < 70.0d => (Brushes.Green, Color.Black),
+            < 78.0d => (Brushes.Orange, Color.Black),
+            _ => (Brushes.Red, Color.White)
+        };
+    }
+}
