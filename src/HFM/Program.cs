@@ -1,5 +1,7 @@
 ﻿using System.Reflection;
 
+using HFM.Core.Services;
+
 using LightInject;
 using LightInject.Microsoft.DependencyInjection;
 
@@ -36,6 +38,10 @@ namespace HFM
                     _ = container.CreateServiceProvider(new EmptyServiceCollection()
                         .AddMemoryCache());
                     bootStrapper.Execute();
+
+                    // Register logger with the FAH project API services
+                    ProjectSummaryServiceBase.Default.SetLogger(bootStrapper.Logger);
+                    ProjectDetailsServiceBase.Default.SetLogger(bootStrapper.Logger);
                 }
                 catch (Exception ex)
                 {
