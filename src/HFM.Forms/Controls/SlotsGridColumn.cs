@@ -28,6 +28,7 @@ public class SlotsGridColumnCollection : Collection<SlotsGridColumn>
         Add(new SlotsGridETAColumn());
         Add(new SlotsGridDefaultColumn("Core", "Core", "Engine used to process the work unit", nameof(IClientData.Core)));
         Add(new SlotsGridProjectColumn());
+        Add(new SlotsGridDefaultColumn("ProjectCause", "Cause", "Project research cause", nameof(IClientData.ProjectCause)));
         Add(new SlotsGridCreditColumn());
         Add(new SlotsGridInt32Column("Completed", "Completed", "Number of completed work units", nameof(IClientData.Completed)));
         Add(new SlotsGridInt32Column("Failed", "Failed", "Number of failed/incomplete work units", nameof(IClientData.Failed)));

@@ -19,6 +19,7 @@ public interface IClientData
     DateTime ETADate { get; }
     string Core { get; }
     string ProjectRunCloneGen { get; }
+    string ProjectCause { get; }
     double Credit { get; }
     int Completed { get; }
     int Failed { get; }
@@ -55,6 +56,7 @@ public class ClientData : IClientData
     public virtual DateTime ETADate { get; set; }
     public virtual string Core { get; set; }
     public virtual string ProjectRunCloneGen { get; set; }
+    public virtual string ProjectCause { get; set; }
     public virtual double Credit { get; set; }
     public virtual int Completed { get; set; }
     public virtual int Failed { get; set; }

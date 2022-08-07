@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text;
 
+using HFM.Core.Services;
 using HFM.Core.WorkUnits;
 using HFM.Preferences;
 using HFM.Proteins;
@@ -151,6 +152,17 @@ public class FahClientData : ClientData, IProteinBenchmarkDetailSource, IComplet
     }
 
     public override string ProjectRunCloneGen => WorkUnitModel.WorkUnit.ToShortProjectString();
+
+    public override string ProjectCause
+    {
+        get
+        {
+            // NOTE: Rely on the cached value here for fast response times (this is used for UI updates in the main view grid).
+            // Cache miss logic should be handled only during process updates, and the underlying logic should only refresh every so often
+            var details = ProjectDetailsServiceBase.Default.TryGet(WorkUnitModel.WorkUnit.ProjectID);
+            return details ? details.ProjectDetails.Cause : "Unknown";
+        }
+    }
 
     public override double Credit =>
         Status.IsRunning()
