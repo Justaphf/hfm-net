@@ -4,6 +4,7 @@ using System.Globalization;
 using HFM.Client;
 using HFM.Core.Data;
 using HFM.Core.Logging;
+using HFM.Core.Services;
 using HFM.Core.WorkUnits;
 using HFM.Log;
 using HFM.Preferences;
@@ -52,6 +53,7 @@ public class FahClient : Client, IFahClient, IFahClientCommand
                      IWorkUnitRepository workUnitRepository)
         : base(logger, preferences)
     {
+        ProjectDetailsService.Logger = logger;
         Benchmarks = benchmarks;
         ProteinService = proteinService;
         WorkUnitRepository = workUnitRepository;
@@ -316,6 +318,9 @@ public class FahClient : Client, IFahClient, IFahClientCommand
         if (workUnits.CurrentID != WorkUnitCollection.NoID && workUnitModels.ContainsID(workUnits.CurrentID))
         {
             clientData.WorkUnitModel = workUnitModels[workUnits.CurrentID];
+            // Update the project details from the API so that we have the Project Cause available
+            // NOTE: We don't actually care if it succeeded of failed, just that the refresh attempt happened
+            await ProjectDetailsService.Default.TryGetWithRefreshAsync(clientData.WorkUnitModel.WorkUnit.ProjectID).ConfigureAwait(false);
         }
     }
 
