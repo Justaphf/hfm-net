@@ -125,6 +125,7 @@ namespace HFM.Forms.Views
             SlotsGridColumns.Find("ETA").AddToDataGridView(dgv);
             SlotsGridColumns.Find("Core").AddToDataGridView(dgv);
             SlotsGridColumns.Find("Project").AddToDataGridView(dgv);
+            SlotsGridColumns.Find("ProjectCause").AddToDataGridView(dgv);
             SlotsGridColumns.Find("Credit").AddToDataGridView(dgv);
             SlotsGridColumns.Find("Completed").AddToDataGridView(dgv);
             SlotsGridColumns.Find("Failed").AddToDataGridView(dgv);
