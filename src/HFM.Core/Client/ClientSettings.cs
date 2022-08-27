@@ -68,6 +68,33 @@ namespace HFM.Core.Client
         [DataMember(Order = 7)]
         public bool Disabled { get; set; }
 
+        /// <summary>
+        /// Gets or set a value that determines if a client connection will be disabled.
+        /// </summary>
+        [DataMember(Order = 8, IsRequired = false)]
+        public bool EnableSsh { get; set; }
+
+        /// <summary>
+        /// The stored SSH private key for connecting to a remote Linux server to obtain nvidia-smi statics
+        /// <br/>REVISIT: This should be stored securely, just directly using string for now while working on proof-of-concept
+        /// </summary>
+        [DataMember(Order = 9, IsRequired = false)]
+        public string SshUserName { get; set; } = String.Empty;
+
+        /// <summary>
+        /// The stored SSH private key for connecting to a remote Linux server to obtain nvidia-smi statics
+        /// <br/>REVISIT: This should be stored securely, just directly using string for now while working on proof-of-concept
+        /// </summary>
+        [DataMember(Order = 10, IsRequired = false)]
+        public int SshPort { get; set; } = 22;
+
+        /// <summary>
+        /// The stored SSH private key for connecting to a remote Linux server to obtain nvidia-smi statics
+        /// <br/>REVISIT: This should be stored securely, just directly using string for now while working on proof-of-concept
+        /// </summary>
+        [DataMember(Order = 11, IsRequired = false)]
+        public string SshPrivateKey { get; set; } = String.Empty;
+
         private const string FahClientLogFileName = "log.txt";
 
         public string ClientLogFileName => String.Format(CultureInfo.InvariantCulture, "{0}-{1}", Name, FahClientLogFileName);
@@ -78,9 +105,16 @@ namespace HFM.Core.Client
         /// </summary>
         public const int DefaultPort = 36330;
 
+        /// <summary>
+        /// The default SSH port
+        /// </summary>
+        public const int DefaultSshPort = 22;
+
         private const string NameFirstCharPattern = "[a-zA-Z0-9\\+=\\-_\\$&^\\[\\]]";
         private const string NameMiddleCharsPattern = "[a-zA-Z0-9\\+=\\-_\\$&^\\[\\] \\.]";
         private const string NameLastCharPattern = "[a-zA-Z0-9\\+=\\-_\\$&^\\[\\]]";
+        private const string LinuxUserNamePattern = @"^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\$)$";
+        private const string SshRsaPemPrivateKeyPattern = @"-----BEGIN RSA PRIVATE KEY-----(\n|\r|\r\n)([0-9a-zA-Z\+\/=]{64}(\n|\r|\r\n))*([0-9a-zA-Z\+\/=]{1,63}(\n|\r|\r\n))?-----END RSA PRIVATE KEY-----";
 
         /// <summary>
         /// Validates the client settings name.
@@ -133,6 +167,33 @@ namespace HFM.Core.Client
             }
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Checks the input int to see if it is within the valid range for ports
+        /// </summary>
+        public static bool DoesPortLookValid(int port) => port is > 0 and < 65535;
+
+        /// <summary>
+        /// Checks the input string to see if it looks like a valid Linux user name
+        /// <br/>NOTE: Only validates the format, not if it's an actual valid user on a system
+        /// </summary>
+        public static bool DoesLinuxUserNameLookValid(string name)
+        {
+            if (String.IsNullOrWhiteSpace(name)) return false;
+
+            return Regex.IsMatch(name, LinuxUserNamePattern, RegexOptions.Singleline);
+        }
+
+        /// <summary>
+        /// Checks the input string to see if it looks like a valid SSH RSA private key
+        /// <br/>NOTE: Only validates the format, does not try to parse the file to verify it is a valid key
+        /// </summary>
+        public static bool DoesSshRsaPrivateKeyLookValid(string privateKey_PEM)
+        {
+            if (String.IsNullOrWhiteSpace(privateKey_PEM)) return false;
+
+            return Regex.IsMatch(privateKey_PEM, SshRsaPemPrivateKeyPattern, RegexOptions.Multiline);
         }
     }
 }
